@@ -14,7 +14,7 @@
 
 .LICENSEURI 
 
-.PROJECTURI 
+.PROJECTURI https://github.com/Winupgrade/Licensing-Report
 
 .ICONURI 
 
@@ -26,7 +26,6 @@
 
 .RELEASENOTES
 
-
 #>
 
 #Requires -Module MSOnline
@@ -36,7 +35,6 @@
 .DESCRIPTION Run this script to export the metadata required to refresh the Power BI Office 365 Licensing Report...
 
 #> 
-param()
 
 Write-Host "`nThis script will export your Office 365 Licensing metadata to C:\Licensing Report\ and overwrite any exsiting files...`n"
 Pause
@@ -49,19 +47,23 @@ Write-Host "`nPlease enter the credentials of an account with the Global Reader 
 Connect-MsolService
 
 #Display and select Account SKUs...
-Get-MsolAccountSku|Select-Object -Property AccountSkuId|Write-Host
+Get-MsolAccountSku|Select-Object -ExpandProperty AccountSkuId|Write-Host
 $Sku = Read-Host -Prompt "`nPlease enter the AccountSkuId you would like to report on...`n"
 
+#Get all users in the tenant...
+$Users = Get-MsolUser -All
+
 #Get license assignment groups...
-$Groups = Get-MsolUser -All|Select-Object -ExpandProperty Licenses|?{
-$_.AccountSkuId -eq $Sku}|Select-Object -ExpandProperty GroupsAssigningLicense|%{Get-MsolGroup -ObjectId $_.Guid -ErrorAction SilentlyContinue}
+$Groups = $Users|Select-Object -ExpandProperty Licenses|?{
+$_.AccountSkuId -eq $Sku}|Select-Object -ExpandProperty GroupsAssigningLicense|Select-Object -Property Guid -Unique|%{
+Get-MsolGroup -ObjectId $_.Guid -ErrorAction SilentlyContinue}
 
 #Export directly assigned users...
-Get-MsolUser -All|?{($_.Licenses|?{
+$Users|?{($_.Licenses|?{
 $_.AccountSkuId -eq $Sku}).GroupsAssigningLicense.Guid -eq $_.ObjectId}|Select-Object -Property UserPrincipalName|Export-Csv -Path "C:\Licensing Report\Direct.csv" -Force -NoTypeInformation
 
-#Export users assigned by group...
-foreach($Group in $Groups){$Id=$Group.ObjectId;Get-MsolUser -All|?{($_.Licenses|?{
+#Export users assigned by groups...
+foreach($Group in $Groups){$Id=$Group.ObjectId;$Users|?{($_.Licenses|?{
 $_.AccountSkuId -eq $Sku}).GroupsAssigningLicense.Guid -eq $Id}|Select-Object -Property UserPrincipalName|Export-Csv -Path "C:\Licensing Report\$Id.csv" -Force -NoTypeInformation}
 
 #Contact: info@winupgrade.co.uk
