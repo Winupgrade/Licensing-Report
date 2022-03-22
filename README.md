@@ -1,2 +1,2 @@
-# Licensing-Report
-A PowerShell script to export your Office 365 licensing metadata and a Power BI report template to visualise it.
+# Office 365 Licensing Report
+https://winupgrade.co.uk/2022/03/22/office-365-licensing-report/
